@@ -1,7 +1,7 @@
 # Love Letter · Taash Edition — Online
 
 Server-authoritative multiplayer Love Letter played with a standard taash deck.
-4–6 players, with empty seats optionally filled with bots up to 4 total seats. Four players can start; six is the maximum. Hands never leave the server,
+3–6 human players can play without bots. With bots enabled, 1–3 humans are filled to 4 total players. Hands never leave the server,
 so nobody can cheat by inspecting the page.
 
 ## Deck
@@ -15,9 +15,10 @@ so nobody can cheat by inspecting the page.
 | 6♠ 6♣ | King | 2 |
 | 7♣ | Countess | 1 |
 | 8♥ | Princess | 1 |
+| K☠ | KILL | 1 |
 
 House rules: Baron duel cards are shown ONLY to the two duelists.
-No public discard lists. First to 4 round wins takes the game. Card 5 forces an opponent, not yourself, to discard face up and redraw.
+No public discard lists. First to 4 round wins takes the game. Card 5 forces an opponent, not yourself, to discard face up and redraw. KILL eliminates any chosen opponent instantly unless that target played a 4 on their previous turn.
 
 ## Files
 ```
@@ -32,7 +33,7 @@ public/
 npm install
 node server.js
 ```
-Open http://localhost:3000 in four browser tabs to test a full table, or use bot fill.
+Open http://localhost:3000 in three or more browser tabs to test, or use bot fill.
 
 ## Deploy — GitHub
 1. Go to github.com → **New repository** → name it `love-letter-taash` → Create.
@@ -58,8 +59,7 @@ Open http://localhost:3000 in four browser tabs to test a full table, or use bot
 1. Open the URL, enter your name, tap **Create table**.
 2. Share the 4-letter code. Friends open the same URL, enter their name and
    the code, tap **Join**.
-3. Any player can tap **Start game**. Tick "Fill to 4 seats with bots" if you're fewer
-   than 4. Four players can start, and the room can hold up to six players.
+3. Any player can tap **Start game**. Three or more humans can start without bots. Tick "Fill to 4 seats with bots" to fill 1–3 humans up to 4 total players. The room can hold up to six human players.
 4. During a game, the **Main room** button at the bottom returns everyone to the lobby and resets the current game.
 5. If someone's phone locks or loses signal, they just reopen the page — the
    session token in their browser reconnects them to their seat automatically.
