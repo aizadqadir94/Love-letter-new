@@ -33,7 +33,9 @@ const DECK_SPEC = [
   { r: "8", s: "♥", v: 8 },
 ];
 const WIN_TARGET = 4;
-const BOT_NAMES = ["Bot Zara", "Bot Rafiq", "Bot Meena", "Bot Iqbal"];
+const MAX_PLAYERS = 6;
+const MIN_START_PLAYERS = 4;
+const BOT_NAMES = ["Bot Zara", "Bot Rafiq", "Bot Meena", "Bot Iqbal", "Bot Sana", "Bot Omar"];
 const cardLabel = (c) => `${c.r}${c.s} ${ROLES[c.v]}`;
 
 /* ── rooms ─────────────────────────────────── */
@@ -112,7 +114,6 @@ function aliveSeats(st) { return st.alive.map((a, i) => (a ? i : -1)).filter((i)
 function validTargets(room, seat, value) {
   const st = room.state;
   const others = room.players.map((_, i) => i).filter((i) => st.alive[i] && i !== seat && !st.prot[i]);
-  if (value === 5) return [...others, seat];
   return others;
 }
 
@@ -210,7 +211,7 @@ function resolvePlay(room, seat, handIdx, targetSeat, guess) {
   if (card.v === 8) {
     eliminate(room, seat, "discarded the Princess 8♥");
     S.push({ title: `${A} is OUT`, sub: "The Princess was discarded", cards: [{ card, faceUp: true, vis: "all" }], red: true, dur: 2600 });
-  } else if (!hasT && [1, 2, 3, 6].includes(card.v)) {
+  } else if (!hasT && [1, 2, 3, 5, 6].includes(card.v)) {
     pushLog(room, `${A} played ${cardLabel(card)} — no valid target`);
     S.push({ title: "No valid target", sub: "Everyone is protected — no effect", cards: [], dur: 2000 });
   } else if (card.v === 1) {
@@ -324,8 +325,7 @@ function botMove(room, seat) {
 
   if ([1, 2, 3, 6].includes(card.v)) targetSeat = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
   else if (card.v === 5) {
-    const others = targets.filter((t) => t !== seat);
-    targetSeat = others.length ? others[Math.floor(Math.random() * others.length)] : seat;
+    targetSeat = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
   }
 
   if (card.v === 1 && targetSeat != null) {
@@ -370,16 +370,25 @@ function broadcastState(room) {
   });
 }
 
-function broadcastLobby(room) {
+function broadcastLobby(room, reset = false) {
   touch(room);
   const lobby = {
     type: "lobby",
     code: room.code,
+    reset,
     players: room.players.map((p, i) => ({ seat: i, name: p.name, isBot: p.isBot, connected: p.isBot || p.connected })),
   };
   room.players.forEach((p, seat) => {
     if (!p.isBot && p.ws) send(p.ws, { ...lobby, youSeat: seat, isHost: seat === 0 });
   });
+}
+
+function returnToLobby(room) {
+  clearTimers(room);
+  room.started = false;
+  room.state = null;
+  room.players = room.players.filter((p) => !p.isBot);
+  broadcastLobby(room, true);
 }
 
 /* ── websocket handling ────────────────────── */
@@ -413,7 +422,7 @@ wss.on("connection", (ws) => {
       if (!name) return send(ws, { type: "error", msg: "Enter a name first." });
       if (!r) return send(ws, { type: "error", msg: "Room not found — check the code." });
       if (r.started) return send(ws, { type: "error", msg: "That game already started." });
-      if (r.players.length >= 4) return send(ws, { type: "error", msg: "Room is full (4 max)." });
+      if (r.players.length >= MAX_PLAYERS) return send(ws, { type: "error", msg: `Room is full (${MAX_PLAYERS} max).` });
       const p = addPlayer(r, name, false);
       p.ws = ws; p.connected = true;
       const seat = r.players.length - 1;
@@ -442,14 +451,20 @@ wss.on("connection", (ws) => {
     if (!room) return;
 
     if (m.type === "start") {
-      if (ws.meta.seat !== 0 || room.started) return;
+      if (room.started) return;
       if (m.fillBots) {
         let b = 0;
-        while (room.players.length < 4) addPlayer(room, BOT_NAMES[b++ % BOT_NAMES.length], true);
+        while (room.players.length < MIN_START_PLAYERS) addPlayer(room, BOT_NAMES[b++ % BOT_NAMES.length], true);
       }
-      if (room.players.length < 2) return send(ws, { type: "error", msg: "Need at least 2 players (or tick 'fill with bots')." });
+      if (room.players.length < MIN_START_PLAYERS) return send(ws, { type: "error", msg: `Need at least ${MIN_START_PLAYERS} players (or tick 'fill with bots').` });
       room.started = true;
       startRound(room, 1, 0, null);
+      return;
+    }
+
+    if (m.type === "returnLobby") {
+      if (!room.started) return;
+      returnToLobby(room);
       return;
     }
 
@@ -479,7 +494,6 @@ wss.on("connection", (ws) => {
     }
 
     if (m.type === "next") {
-      if (ws.meta.seat !== 0) return;
       const st = room.state;
       if (!st || st.phase !== "roundOver" || !st.roundOver) return;
       if (st.gameOver != null) startRound(room, 1, 0, null);
