@@ -33,13 +33,13 @@ const DECK_SPEC = [
   { r: "8", s: "♥", v: 8 },
   { r: "K", s: "☠", v: 9 },
 ];
-const SIX_PLAYER_EXTRA_CARDS = [
+const FIVE_PLUS_PLAYER_EXTRA_CARDS = [
   { r: "J", s: "♥", v: 1 },
   { r: "2", s: "♣", v: 2 },
   { r: "3", s: "♣", v: 3 },
 ];
 function deckForPlayerCount(n) {
-  return n === 6 ? [...DECK_SPEC, ...SIX_PLAYER_EXTRA_CARDS] : DECK_SPEC;
+  return n >= 5 ? [...DECK_SPEC, ...FIVE_PLUS_PLAYER_EXTRA_CARDS] : DECK_SPEC;
 }
 const WIN_TARGET = 4;
 const MAX_PLAYERS = 6;

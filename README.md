@@ -1,7 +1,7 @@
 # Love Letter · Taash Edition — Online
 
 Server-authoritative multiplayer Love Letter played with a standard taash deck.
-3–6 human players can play without bots. With bots enabled, 1–3 humans are filled to 4 total players. The normal deck is used for 3–5 players; with 6 players, one extra Guard, one extra Priest, and one extra Baron are added. Hands never leave the server,
+3–6 human players can play without bots. With bots enabled, 1–3 humans are filled to 4 total players. The normal deck is used for 3–4 players; with 5–6 players, one extra Guard, one extra Priest, and one extra Baron are added. Hands never leave the server,
 so nobody can cheat by inspecting the page.
 
 ## Deck
@@ -17,7 +17,7 @@ so nobody can cheat by inspecting the page.
 | 8♥ | Princess | 1 |
 | K☠ | KILL | 1 |
 
-For 6 players only: add J♥ Guard, 2♣ Priest, and 3♣ Baron.
+For 5–6 players: add J♥ Guard, 2♣ Priest, and 3♣ Baron.
 
 House rules: Baron duel cards are shown ONLY to the two duelists.
 No public discard lists. First to 4 round wins takes the game. Card 5 forces an opponent, not yourself, to discard face up and redraw. KILL eliminates any chosen opponent instantly unless that target played a 4 on their previous turn.
