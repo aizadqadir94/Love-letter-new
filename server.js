@@ -33,6 +33,14 @@ const DECK_SPEC = [
   { r: "8", s: "♥", v: 8 },
   { r: "K", s: "☠", v: 9 },
 ];
+const SIX_PLAYER_EXTRA_CARDS = [
+  { r: "J", s: "♥", v: 1 },
+  { r: "2", s: "♣", v: 2 },
+  { r: "3", s: "♣", v: 3 },
+];
+function deckForPlayerCount(n) {
+  return n === 6 ? [...DECK_SPEC, ...SIX_PLAYER_EXTRA_CARDS] : DECK_SPEC;
+}
 const WIN_TARGET = 4;
 const MAX_PLAYERS = 6;
 const MIN_START_PLAYERS = 3;
@@ -88,7 +96,8 @@ function touch(room) { room.lastActive = Date.now(); }
 /* ── round setup ───────────────────────────── */
 function startRound(room, roundNum, starter, keepWins) {
   const n = room.players.length;
-  const deck = shuffle(DECK_SPEC.map((c) => ({ ...c })));
+  const roundDeckSpec = deckForPlayerCount(n);
+  const deck = shuffle(roundDeckSpec.map((c) => ({ ...c })));
   const burned = deck.pop();
   room.state = {
     hands: Array.from({ length: n }, () => [deck.pop()]),
@@ -97,6 +106,7 @@ function startRound(room, roundNum, starter, keepWins) {
     prot: Array(n).fill(false),
     wins: keepWins || Array(n).fill(0),
     lastPlayed: Array(n).fill(null),
+    deckSpec: roundDeckSpec,
     deck, burned,
     turn: starter, roundNum,
     phase: "turn",
@@ -359,7 +369,7 @@ function botMove(room, seat) {
   if (card.v === 1 && targetSeat != null) {
     const seen = [...hand, ...st.discards.flat()];
     const counts = {};
-    DECK_SPEC.forEach((c) => { if (c.v >= 2) counts[c.v] = (counts[c.v] || 0) + 1; });
+    (st.deckSpec || DECK_SPEC).forEach((c) => { if (c.v >= 2) counts[c.v] = (counts[c.v] || 0) + 1; });
     seen.forEach((c) => { if (c.v >= 2 && counts[c.v]) counts[c.v]--; });
     const pool = [];
     Object.entries(counts).forEach(([v, n]) => { for (let k = 0; k < n; k++) pool.push(+v); });
@@ -411,12 +421,15 @@ function broadcastLobby(room, reset = false) {
   });
 }
 
-function returnToLobby(room) {
+function returnToHome(room) {
   clearTimers(room);
-  room.started = false;
-  room.state = null;
-  room.players = room.players.filter((p) => !p.isBot);
-  broadcastLobby(room, true);
+  room.players.forEach((p) => {
+    if (!p.isBot && p.ws) {
+      send(p.ws, { type: "homeReset" });
+      p.ws.meta = { code: null, seat: null };
+    }
+  });
+  rooms.delete(room.code);
 }
 
 /* ── websocket handling ────────────────────── */
@@ -491,8 +504,7 @@ wss.on("connection", (ws) => {
     }
 
     if (m.type === "returnLobby") {
-      if (!room.started) return;
-      returnToLobby(room);
+      returnToHome(room);
       return;
     }
 

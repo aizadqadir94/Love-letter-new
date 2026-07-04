@@ -1,7 +1,7 @@
 # Love Letter · Taash Edition — Online
 
 Server-authoritative multiplayer Love Letter played with a standard taash deck.
-3–6 human players can play without bots. With bots enabled, 1–3 humans are filled to 4 total players. Hands never leave the server,
+3–6 human players can play without bots. With bots enabled, 1–3 humans are filled to 4 total players. The normal deck is used for 3–5 players; with 6 players, one extra Guard, one extra Priest, and one extra Baron are added. Hands never leave the server,
 so nobody can cheat by inspecting the page.
 
 ## Deck
@@ -16,6 +16,8 @@ so nobody can cheat by inspecting the page.
 | 7♣ | Countess | 1 |
 | 8♥ | Princess | 1 |
 | K☠ | KILL | 1 |
+
+For 6 players only: add J♥ Guard, 2♣ Priest, and 3♣ Baron.
 
 House rules: Baron duel cards are shown ONLY to the two duelists.
 No public discard lists. First to 4 round wins takes the game. Card 5 forces an opponent, not yourself, to discard face up and redraw. KILL eliminates any chosen opponent instantly unless that target played a 4 on their previous turn.
@@ -60,7 +62,7 @@ Open http://localhost:3000 in three or more browser tabs to test, or use bot fil
 2. Share the 4-letter code. Friends open the same URL, enter their name and
    the code, tap **Join**.
 3. Any player can tap **Start game**. Three or more humans can start without bots. Tick "Fill to 4 seats with bots" to fill 1–3 humans up to 4 total players. The room can hold up to six human players.
-4. During a game, the **Main room** button at the bottom returns everyone to the lobby and resets the current game.
+4. During a game, the **Main room** button at the bottom ends the current table for everyone and returns all players to the first screen, so anyone can create or join a new game.
 5. If someone's phone locks or loses signal, they just reopen the page — the
    session token in their browser reconnects them to their seat automatically.
 
