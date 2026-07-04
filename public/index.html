@@ -108,6 +108,7 @@
   .gbtn { font-family:'Crimson Pro',serif; font-weight:700; font-size:12.5px; background:#faf6ec; color:#1c1a17; border:1px solid #cfc4a6; border-radius:6px; padding:3px 6px; cursor:pointer; line-height:1.1; }
   .gbtn small { display:block; font-family:'Inter',sans-serif; font-weight:600; font-size:6.5px; color:#5a5344; }
   .cancel { background:transparent; color:#9dbdb0; border:1px solid rgba(157,189,176,.4); border-radius:6px; padding:3px 8px; font-size:9.5px; cursor:pointer; margin-top:5px; }
+  .roombtn { margin-left:auto; background:rgba(157,189,176,.12); color:#bcd6ca; border:1px solid rgba(157,189,176,.32); border-radius:99px; padding:2px 8px; font-size:9px; font-weight:700; cursor:pointer; white-space:nowrap; }
 
   .logpanel { position:absolute; right:6px; top:6px; bottom:6px; width:min(270px,82%); background:rgba(6,14,11,.97); border:1px solid rgba(157,189,176,.3); border-radius:12px; padding:10px 12px; overflow-y:auto; font-size:10.5px; line-height:1.7; color:#bcd6ca; z-index:20; }
   .logpanel h3 { font-size:11px; color:#e8cf8f; margin-bottom:4px; display:flex; justify-content:space-between; }
@@ -156,10 +157,10 @@
   <div class="panel">
     <div class="plist" id="lobbyList"></div>
     <div id="hostControls" class="hidden">
-      <label class="chk"><input type="checkbox" id="fillBots" checked> Fill empty seats with bots</label>
+      <label class="chk"><input type="checkbox" id="fillBots" checked> Fill to 4 seats with bots</label>
       <button class="btn" id="startBtn" style="margin-top:8px">Start game</button>
     </div>
-    <div class="waitnote" id="waitNote">Waiting for the host to start…</div>
+    <div class="waitnote" id="waitNote">Any player can start once the table is ready.</div>
     <div class="err" id="lobbyErr"></div>
   </div>
 </div>
@@ -186,7 +187,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
   const ROLES = {1:"Guard",2:"Priest",3:"Baron",4:"Handmaid",5:"Prince",6:"King",7:"Countess",8:"Princess"};
-  const FX = {1:"Guess a card (not Guard). Right → out.",2:"Peek at a player's hand.",3:"Compare hands. Lower is out.",4:"Protected until your next turn.",5:"Player discards hand & redraws.",6:"Trade hands with a player.",7:"Forced play with King/Prince.",8:"Discard her = you're out."};
+  const FX = {1:"Guess a card (not Guard). Right → out.",2:"Peek at a player's hand.",3:"Compare hands. Lower is out.",4:"Protected until your next turn.",5:"Opponent discards hand & redraws.",6:"Trade hands with a player.",7:"Forced play with King/Prince.",8:"Discard her = you're out."};
   const isRed = (s) => s === "♥" || s === "♦";
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 
@@ -239,6 +240,15 @@
     }
     if (m.type === "lobby") {
       lobby = m;
+      if (m.reset) {
+        view = null; pendingView = null; playing = false; clearTimeout(sceneTimer);
+        ui = { mode: "idle", selCard: null, selTarget: null };
+        banner = { title: "", sub: "" };
+        $("modalWrap").innerHTML = "";
+        $("logPanel").classList.add("hidden");
+        show("lobby"); renderLobby();
+        return;
+      }
       if (!view) { show("lobby"); renderLobby(); }
       return;
     }
@@ -319,15 +329,12 @@
         ${p.seat === 0 ? `<span class="tag">HOST</span>` : ""}
         ${p.isBot ? `<span class="tag">BOT</span>` : ""}
       </div>`).join("");
-    const host = lobby.isHost;
-    $("hostControls").classList.toggle("hidden", !host);
-    $("waitNote").classList.toggle("hidden", host);
+    $("hostControls").classList.remove("hidden");
+    $("waitNote").classList.add("hidden");
   }
 
   function targetsFor(cardV) {
-    const others = view.players.filter((p) => p.alive && !p.prot && p.seat !== view.youSeat).map((p) => p.seat);
-    if (cardV === 5) return [...others, view.youSeat];
-    return others;
+    return view.players.filter((p) => p.alive && !p.prot && p.seat !== view.youSeat).map((p) => p.seat);
   }
 
   function renderGame() {
@@ -399,6 +406,7 @@
             ${me.prot && me.alive ? `<span class="chip shield">🛡 Protected</span>` : ""}
             ${!me.alive ? `<span class="chip out">OUT</span>` : ""}
             ${meTargetable ? `<span class="chip shield">TAP HERE = YOURSELF</span>` : ""}
+            <button class="roombtn" id="roomBtn">Main room</button>
           </div>
           <div class="hint">${hint}</div>
           ${ui.mode === "guess" ? `<div class="guessrow">${[2,3,4,5,6,7,8].map((v) => `<button class="gbtn" data-g="${v}">${v}<small>${ROLES[v]}</small></button>`).join("")}</div>` : ""}
@@ -413,19 +421,19 @@
     else $("meBar").onclick = null;
     $("meBar").querySelectorAll(".gbtn").forEach((el) => { el.onclick = (e) => { e.stopPropagation(); pickGuess(+el.dataset.g); }; });
     const cb = $("cancelBtn"); if (cb) cb.onclick = (e) => { e.stopPropagation(); ui = { mode: "choose", selCard: null, selTarget: null }; banner = { title: "Your turn", sub: "Pick a card to play" }; renderGame(); };
+    const rb = $("roomBtn"); if (rb) rb.onclick = (e) => { e.stopPropagation(); if (confirm("Return everyone to the main room and reset this game?")) sendMsg({ type: "returnLobby" }); };
   }
 
   function renderModal() {
     const w = $("modalWrap");
     if (view.phase === "roundOver" && view.roundOver) {
-      const isHost = view.youSeat === 0;
       const go = view.gameOver != null;
       w.innerHTML = `
         <div class="overlay"><div class="modal">
           <h2>${go ? `👑 ${esc(view.players[view.gameOver].name)} wins the game!` : `🏆 ${esc(view.players[view.roundOver.winner].name)} takes Round ${view.roundNum}`}</h2>
           <p>${esc(view.roundOver.how)}</p>
           <div class="scores">${view.players.map((p) => `<div class="score">${esc(p.name)}<b>${p.wins}</b></div>`).join("")}</div>
-          ${isHost ? `<button class="btn" id="nextBtn">${go ? "New game" : "Next round"}</button>` : `<div class="waitnote">Waiting for the host…</div>`}
+          <button class="btn" id="nextBtn">${go ? "New game" : "Next round"}</button>
         </div></div>`;
       const nb = $("nextBtn"); if (nb) nb.onclick = () => sendMsg({ type: "next" });
     } else w.innerHTML = "";
@@ -449,7 +457,7 @@
       return;
     }
     ui.mode = "target";
-    banner = { title: `Playing ${c.r}${c.s} ${ROLES[c.v]}`, sub: c.v === 5 ? "Pick a player (or yourself)" : "Pick a target" };
+    banner = { title: `Playing ${c.r}${c.s} ${ROLES[c.v]}`, sub: c.v === 5 ? "Pick an opponent" : "Pick a target" };
     renderGame();
   }
   function pickTarget(seat) {
