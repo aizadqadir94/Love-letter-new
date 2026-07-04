@@ -237,9 +237,22 @@
   function sendMsg(o) { if (wsOpen) ws.send(JSON.stringify(o)); }
   setInterval(() => sendMsg({ type: "ping" }), 20000);
 
+  function resetToHome() {
+    localStorage.removeItem("llt_sess");
+    sess = null; view = null; pendingView = null; lobby = null; playing = false;
+    clearTimeout(sceneTimer);
+    ui = { mode: "idle", selCard: null, selTarget: null };
+    banner = { title: "", sub: "" };
+    $("modalWrap").innerHTML = "";
+    $("logPanel").classList.add("hidden");
+    $("homeErr").textContent = ""; $("lobbyErr").textContent = "";
+    show("home");
+  }
+
   /* ── message handling ── */
   function handle(m) {
     if (m.type === "pong") return;
+    if (m.type === "homeReset") { resetToHome(); return; }
     if (m.type === "error") {
       if (m.fatal) { localStorage.removeItem("llt_sess"); sess = null; show("home"); }
       $("homeErr").textContent = m.msg; $("lobbyErr").textContent = m.msg;
@@ -433,7 +446,7 @@
     else $("meBar").onclick = null;
     $("meBar").querySelectorAll(".gbtn").forEach((el) => { el.onclick = (e) => { e.stopPropagation(); pickGuess(+el.dataset.g); }; });
     const cb = $("cancelBtn"); if (cb) cb.onclick = (e) => { e.stopPropagation(); ui = { mode: "choose", selCard: null, selTarget: null }; banner = { title: "Your turn", sub: "Pick a card to play" }; renderGame(); };
-    const rb = $("roomBtn"); if (rb) rb.onclick = (e) => { e.stopPropagation(); if (confirm("Return everyone to the main room and reset this game?")) sendMsg({ type: "returnLobby" }); };
+    const rb = $("roomBtn"); if (rb) rb.onclick = (e) => { e.stopPropagation(); if (confirm("End this table and return everyone to the main screen? Everyone can create or join a new game after this.")) sendMsg({ type: "returnLobby" }); };
   }
 
   function renderModal() {
