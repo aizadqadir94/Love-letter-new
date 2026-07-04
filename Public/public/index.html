@@ -1,1 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Love Letter · Taash</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing:border-box; margin:0; -webkit-tap-highlight-color:transparent; }
+  html,body { height:100%; }
+  body { background:#0c1c18; font-family:'Inter',sans-serif; color:#e8efe9; overflow:hidden; }
+  .hidden { display:none !important; }
+  button { font-family:inherit; }
 
+  /* ── home & lobby ── */
+  .center-screen { height:100dvh; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:14px; padding:20px; background: radial-gradient(ellipse at 50% 35%, #23524a 0%, #14312a 60%, #0c1c18 100%); }
+  .logo { font-family:'Crimson Pro',serif; font-size:34px; font-weight:700; color:#f2e8cf; text-align:center; line-height:1.1; }
+  .logo span { color:#c9a24b; display:block; font-size:16px; }
+  .panel { background:rgba(8,20,16,.75); border:1px solid rgba(201,162,75,.4); border-radius:16px; padding:20px; width:min(340px,92%); display:flex; flex-direction:column; gap:10px; }
+  .panel input { background:rgba(157,189,176,.1); border:1px solid rgba(157,189,176,.35); border-radius:9px; color:#e8efe9; padding:11px 12px; font-size:15px; width:100%; }
+  .panel input::placeholder { color:#7fa093; }
+  .btn { background:#c9a24b; color:#1c1a17; font-weight:700; border:none; border-radius:9px; padding:12px; font-size:14px; cursor:pointer; width:100%; }
+  .btn:active { transform:scale(.98); }
+  .btn.ghost { background:transparent; color:#bcd6ca; border:1px solid rgba(157,189,176,.4); }
+  .row2 { display:flex; gap:8px; }
+  .row2 input { text-transform:uppercase; letter-spacing:3px; text-align:center; font-weight:700; }
+  .err { color:#ff9d8a; font-size:12px; min-height:15px; text-align:center; }
+  .codebig { font-family:'Crimson Pro',serif; font-size:40px; letter-spacing:8px; color:#e8cf8f; text-align:center; }
+  .codehint { font-size:11.5px; color:#8fb3a5; text-align:center; }
+  .plist { display:flex; flex-direction:column; gap:6px; }
+  .prow { display:flex; align-items:center; gap:8px; background:rgba(157,189,176,.08); border-radius:8px; padding:8px 11px; font-size:13.5px; font-weight:600; }
+  .prow .dot { width:8px; height:8px; border-radius:99px; background:#7fd4a8; }
+  .prow .dot.off { background:#b3402e; }
+  .prow .tag { margin-left:auto; font-size:9.5px; color:#e8cf8f; background:rgba(201,162,75,.2); padding:1px 7px; border-radius:99px; }
+  .chk { display:flex; align-items:center; gap:8px; font-size:12.5px; color:#bcd6ca; }
+  .chk input { width:auto; }
+
+  /* ── game ── */
+  #game { height:100dvh; display:flex; flex-direction:column; }
+  .hdr { flex:0 0 auto; display:flex; align-items:center; gap:8px; padding:6px 10px; }
+  .hdr h1 { font-family:'Crimson Pro',serif; font-size:15px; color:#f2e8cf; font-weight:700; flex:1; }
+  .hdr h1 span { color:#c9a24b; }
+  .hbtn { font-size:10px; background:rgba(157,189,176,.12); color:#bcd6ca; border:1px solid rgba(157,189,176,.3); border-radius:99px; padding:3px 9px; cursor:pointer; }
+  .hbtn.on { background:rgba(201,162,75,.25); color:#e8cf8f; border-color:#c9a24b; }
+
+  .tablewrap { flex:1 1 auto; position:relative; display:flex; flex-direction:column; min-height:0; padding:6px 8px 4px; }
+  .felt { position:absolute; inset:2px 6px; border-radius:38% / 32%; background: radial-gradient(ellipse at 50% 40%, #2a5c50 0%, #1c443a 55%, #143128 100%); border:6px solid #3d2318; box-shadow: inset 0 0 46px rgba(0,0,0,.55), 0 6px 24px rgba(0,0,0,.5); }
+  .oppsrow { position:relative; z-index:2; display:flex; gap:6px; }
+  .seat { flex:1 1 0; min-width:0; background:rgba(8,20,16,.85); border:1px solid rgba(157,189,176,.22); border-radius:10px; padding:5px 7px; transition:border .2s, box-shadow .2s; }
+  .seat.active { border-color:#c9a24b; box-shadow:0 0 0 1px #c9a24b, 0 0 14px rgba(201,162,75,.35); }
+  .seat.dead { opacity:.42; filter:grayscale(.8); }
+  .seat.targetable { border-color:#7fd4a8; box-shadow:0 0 0 2px #7fd4a8; cursor:pointer; animation:pulse 1.2s infinite; }
+  @keyframes pulse { 0%,100% { box-shadow:0 0 0 2px #7fd4a8, 0 0 10px rgba(127,212,168,.3);} 50% { box-shadow:0 0 0 3px #7fd4a8, 0 0 22px rgba(127,212,168,.6);} }
+  .seat-top { display:flex; align-items:center; gap:3px; flex-wrap:wrap; margin-bottom:4px; }
+  .pname { font-weight:700; font-size:11.5px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+  .chip { font-size:8.5px; padding:1px 5px; border-radius:99px; background:rgba(157,189,176,.14); color:#bcd6ca; font-weight:600; white-space:nowrap; }
+  .chip.gold { background:rgba(201,162,75,.22); color:#e8cf8f; }
+  .chip.shield { background:rgba(127,212,168,.2); color:#9fe6c1; }
+  .chip.out { background:rgba(179,64,46,.3); color:#f0a99d; }
+  .chip.off { background:rgba(179,64,46,.25); color:#f0a99d; }
+  .cardback { width:30px; height:42px; background:linear-gradient(160deg,#7a2f26,#571f18); border:1px solid #3f1712; border-radius:4px; display:flex; align-items:center; justify-content:center; color:#e8cf8f; font-size:12px; box-shadow:0 2px 4px rgba(0,0,0,.4); }
+  .deadtxt { color:#6d8a7d; font-size:10px; }
+  .tap { font-size:8px; letter-spacing:1px; color:#9fe6c1; text-align:center; margin-top:3px; font-weight:700; }
+
+  .midarea { position:relative; z-index:1; flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:0; padding:4px 0; }
+  .banner { background:rgba(8,20,16,.78); border:1px solid rgba(201,162,75,.5); border-radius:11px; padding:8px 14px; text-align:center; max-width:82%; animation:pop .3s ease; }
+  .banner h2 { font-family:'Crimson Pro',serif; font-size:15px; color:#f2e8cf; line-height:1.25; }
+  .banner p { font-size:10.5px; color:#bcd6ca; margin-top:3px; }
+  @keyframes pop { from { transform:scale(.95); opacity:.3 } to { transform:scale(1); opacity:1 } }
+  .deckrow { text-align:center; margin-top:6px; font-size:9px; color:#8fb3a5; }
+  .deckrow .cardback { width:22px; height:31px; font-size:10px; margin:0 auto 2px; }
+
+  .stage { text-align:center; animation:pop .35s ease; max-width:92%; }
+  .stitle { font-family:'Crimson Pro',serif; font-size:clamp(16px, 4.6vw, 21px); font-weight:700; color:#f2e8cf; line-height:1.2; }
+  .stitle.red { color:#ff9d8a; text-shadow:0 0 18px rgba(179,64,46,.6); }
+  .ssub { font-size:11px; color:#bcd6ca; margin-top:6px; }
+  .scards { display:flex; gap:14px; justify-content:center; margin-top:10px; align-items:flex-end; }
+  .stagecol { display:flex; flex-direction:column; align-items:center; gap:4px; }
+  .stagelabel { font-size:9.5px; font-weight:700; color:#e8cf8f; letter-spacing:.5px; }
+  .sflipwrap { width:74px; height:102px; perspective:500px; }
+  .sflipinner { position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .9s cubic-bezier(.4,.15,.2,1); }
+  .sflipinner.flipped { transform:rotateY(180deg); }
+  .sface { position:absolute; inset:0; backface-visibility:hidden; border-radius:8px; display:flex; flex-direction:column; align-items:center; justify-content:center; box-shadow:0 5px 14px rgba(0,0,0,.5); }
+  .sface.back { background:linear-gradient(160deg,#7a2f26,#571f18); border:1px solid #3f1712; color:#e8cf8f; font-size:24px; }
+  .sface.front { background:linear-gradient(160deg,#fbf7ee,#efe7d2); border:1px solid #cfc4a6; color:#1c1a17; transform:rotateY(180deg); outline:2px solid #c9a24b; }
+  .sface.front b { font-family:'Crimson Pro',serif; font-size:26px; line-height:1; }
+  .sface.front i { font-size:10px; font-style:normal; font-weight:700; margin-top:3px; }
+  .sface.front em { font-style:normal; font-family:'Crimson Pro',serif; font-weight:700; font-size:11px; opacity:.7; margin-top:2px; }
+  .red { color:#b3402e; }
+
+  .mebar { flex:0 0 auto; background:rgba(8,20,16,.94); border-top:1px solid rgba(201,162,75,.35); padding:8px 10px calc(10px + env(safe-area-inset-bottom)); z-index:3; }
+  .mebar.turn { border-top-color:#c9a24b; box-shadow:0 -4px 20px rgba(201,162,75,.15); }
+  .mebar.metarget { border-top-color:#7fd4a8; box-shadow:0 -4px 20px rgba(127,212,168,.3); cursor:pointer; animation:pulse 1.2s infinite; }
+  .merow { display:flex; align-items:flex-start; gap:10px; }
+  .mecards { display:flex; gap:8px; flex:0 0 auto; }
+  .bigcard { width:78px; height:106px; background:linear-gradient(160deg,#fbf7ee,#efe7d2); color:#1c1a17; border:1px solid #cfc4a6; border-radius:8px; padding:6px; position:relative; box-shadow:0 3px 8px rgba(0,0,0,.4); display:flex; flex-direction:column; }
+  .bigcard.click { cursor:pointer; transition:transform .15s; }
+  .bigcard.click:active { transform:translateY(-5px); }
+  .bigcard.dim { opacity:.4; }
+  .bigcard .rk { font-family:'Crimson Pro',serif; font-size:19px; font-weight:700; line-height:1; }
+  .bigcard .rl { font-family:'Crimson Pro',serif; font-size:11px; font-weight:700; border-top:1px solid #d8d0bd; margin-top:3px; padding-top:3px; }
+  .bigcard .fx { font-size:8px; color:#5a5344; line-height:1.3; margin-top:2px; }
+  .bigcard .vv { position:absolute; bottom:3px; right:6px; font-family:'Crimson Pro',serif; font-weight:700; font-size:12px; opacity:.8; }
+  .meinfo { flex:1; min-width:0; }
+  .hint { font-size:10.5px; color:#e8cf8f; min-height:14px; margin-top:2px; }
+  .guessrow { display:flex; gap:4px; flex-wrap:wrap; margin-top:5px; }
+  .gbtn { font-family:'Crimson Pro',serif; font-weight:700; font-size:12.5px; background:#faf6ec; color:#1c1a17; border:1px solid #cfc4a6; border-radius:6px; padding:3px 6px; cursor:pointer; line-height:1.1; }
+  .gbtn small { display:block; font-family:'Inter',sans-serif; font-weight:600; font-size:6.5px; color:#5a5344; }
+  .cancel { background:transparent; color:#9dbdb0; border:1px solid rgba(157,189,176,.4); border-radius:6px; padding:3px 8px; font-size:9.5px; cursor:pointer; margin-top:5px; }
+
+  .logpanel { position:absolute; right:6px; top:6px; bottom:6px; width:min(270px,82%); background:rgba(6,14,11,.97); border:1px solid rgba(157,189,176,.3); border-radius:12px; padding:10px 12px; overflow-y:auto; font-size:10.5px; line-height:1.7; color:#bcd6ca; z-index:20; }
+  .logpanel h3 { font-size:11px; color:#e8cf8f; margin-bottom:4px; display:flex; justify-content:space-between; }
+  .logpanel h3 button { background:none; border:none; color:#9dbdb0; cursor:pointer; font-size:13px; }
+
+  .overlay { position:fixed; inset:0; background:rgba(6,14,11,.84); display:flex; align-items:center; justify-content:center; z-index:50; }
+  .modal { background:linear-gradient(160deg,#1d423a,#122c26); border:1px solid #c9a24b; border-radius:14px; padding:20px 22px; text-align:center; max-width:88%; width:350px; }
+  .modal h2 { font-family:'Crimson Pro',serif; font-size:20px; color:#f2e8cf; margin-bottom:4px; }
+  .modal p { color:#bcd6ca; font-size:11.5px; margin-bottom:12px; }
+  .scores { display:flex; gap:8px; justify-content:center; margin-bottom:14px; flex-wrap:wrap; }
+  .score { background:rgba(8,20,16,.6); border-radius:8px; padding:6px 10px; font-size:10px; }
+  .score b { display:block; font-size:16px; font-family:'Crimson Pro',serif; color:#e8cf8f; }
+  .waitnote { font-size:11px; color:#8fb3a5; }
+  .connbar { position:fixed; top:0; left:0; right:0; background:#b3402e; color:#fff; font-size:11px; text-align:center; padding:4px; z-index:99; }
+
+  @media (max-width:420px) {
+    .bigcard { width:70px; height:96px; }
+    .bigcard .fx { display:none; }
+    .sflipwrap { width:64px; height:88px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="connbar" class="connbar hidden">Reconnecting…</div>
+
+<!-- HOME -->
+<div id="home" class="center-screen">
+  <div class="logo">Love Letter<span>· Taash Edition ·</span></div>
+  <div class="panel">
+    <input id="nameInput" maxlength="14" placeholder="Your name">
+    <button class="btn" id="createBtn">Create table</button>
+    <div class="row2">
+      <input id="codeInput" maxlength="4" placeholder="CODE">
+      <button class="btn ghost" id="joinBtn" style="width:46%">Join</button>
+    </div>
+    <div class="err" id="homeErr"></div>
+  </div>
+</div>
+
+<!-- LOBBY -->
+<div id="lobby" class="center-screen hidden">
+  <div class="logo" style="font-size:24px">Table code<span style="display:none"></span></div>
+  <div class="codebig" id="lobbyCode">----</div>
+  <div class="codehint">Share this code — friends open this page and tap Join</div>
+  <div class="panel">
+    <div class="plist" id="lobbyList"></div>
+    <div id="hostControls" class="hidden">
+      <label class="chk"><input type="checkbox" id="fillBots" checked> Fill empty seats with bots</label>
+      <button class="btn" id="startBtn" style="margin-top:8px">Start game</button>
+    </div>
+    <div class="waitnote" id="waitNote">Waiting for the host to start…</div>
+    <div class="err" id="lobbyErr"></div>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game" class="hidden">
+  <div class="hdr">
+    <h1>Love Letter <span>· Taash</span></h1>
+    <button class="hbtn" id="fastBtn">⚡ Normal</button>
+    <button class="hbtn" id="logBtn">Log</button>
+  </div>
+  <div class="tablewrap">
+    <div class="felt"></div>
+    <div class="oppsrow" id="oppsRow"></div>
+    <div class="midarea" id="midArea"></div>
+    <div class="logpanel hidden" id="logPanel"></div>
+  </div>
+  <div class="mebar" id="meBar"></div>
+</div>
+
+<div id="modalWrap"></div>
+
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const ROLES = {1:"Guard",2:"Priest",3:"Baron",4:"Handmaid",5:"Prince",6:"King",7:"Countess",8:"Princess"};
+  const FX = {1:"Guess a card (not Guard). Right → out.",2:"Peek at a player's hand.",3:"Compare hands. Lower is out.",4:"Protected until your next turn.",5:"Player discards hand & redraws.",6:"Trade hands with a player.",7:"Forced play with King/Prince.",8:"Discard her = you're out."};
+  const isRed = (s) => s === "♥" || s === "♦";
+  const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  let ws = null, wsOpen = false, retry = 0;
+  let sess = null; try { sess = JSON.parse(localStorage.getItem("llt_sess") || "null"); } catch {}
+  let view = null;          // latest server state
+  let pendingView = null;   // state received while scenes playing
+  let lobby = null;
+  let ui = { mode: "idle", selCard: null, selTarget: null }; // choose flow
+  let playing = false;      // scenes playing
+  let sceneTimer = null;
+  let fast = false;
+  let banner = { title: "", sub: "" };
+
+  /* ── websocket ── */
+  function connect() {
+    const proto = location.protocol === "https:" ? "wss" : "ws";
+    ws = new WebSocket(proto + "://" + location.host);
+    ws.onopen = () => {
+      wsOpen = true; retry = 0;
+      $("connbar").classList.add("hidden");
+      if (sess) sendMsg({ type: "rejoin", code: sess.code, token: sess.token });
+    };
+    ws.onclose = () => {
+      wsOpen = false;
+      $("connbar").classList.remove("hidden");
+      setTimeout(connect, Math.min(1000 * 2 ** retry++, 10000));
+    };
+    ws.onmessage = (e) => {
+      let m; try { m = JSON.parse(e.data); } catch { return; }
+      handle(m);
+    };
+  }
+  function sendMsg(o) { if (wsOpen) ws.send(JSON.stringify(o)); }
+  setInterval(() => sendMsg({ type: "ping" }), 20000);
+
+  /* ── message handling ── */
+  function handle(m) {
+    if (m.type === "pong") return;
+    if (m.type === "error") {
+      if (m.fatal) { localStorage.removeItem("llt_sess"); sess = null; show("home"); }
+      $("homeErr").textContent = m.msg; $("lobbyErr").textContent = m.msg;
+      if (view) { banner = { title: "⚠ " + m.msg, sub: "" }; renderMid(); }
+      return;
+    }
+    if (m.type === "joined") {
+      sess = { code: m.code, token: m.token };
+      localStorage.setItem("llt_sess", JSON.stringify(sess));
+      return;
+    }
+    if (m.type === "lobby") {
+      lobby = m;
+      if (!view) { show("lobby"); renderLobby(); }
+      return;
+    }
+    if (m.type === "state") {
+      if (playing) { pendingView = m; return; }
+      applyState(m);
+      return;
+    }
+    if (m.type === "scenes") { playScenes(m.scenes); return; }
+  }
+
+  function applyState(m) {
+    const firstState = !view;
+    view = m;
+    show("game");
+    if (m.phase === "turn") {
+      const mine = m.turn === m.youSeat;
+      banner = mine
+        ? { title: "Your turn", sub: "Pick a card to play" }
+        : { title: `${m.players[m.turn].name}'s turn`, sub: m.players[m.turn].connected ? "thinking…" : "⚠ disconnected — waiting" };
+      if (mine && ui.mode === "idle") ui = { mode: "choose", selCard: null, selTarget: null };
+      if (!mine) ui = { mode: "idle", selCard: null, selTarget: null };
+    }
+    renderGame();
+  }
+
+  /* ── scenes ── */
+  function playScenes(scenes) {
+    playing = true;
+    ui = { mode: "idle", selCard: null, selTarget: null };
+    let i = 0;
+    const step = () => {
+      if (i >= scenes.length) {
+        playing = false;
+        if (pendingView) { const v = pendingView; pendingView = null; applyState(v); }
+        else renderGame();
+        return;
+      }
+      const sc = scenes[i++];
+      renderStage(sc);
+      sceneTimer = setTimeout(step, sc.dur * (fast ? 0.5 : 1));
+    };
+    step();
+  }
+
+  function renderStage(sc) {
+    const cards = (sc.cards || []).map((c, i) => `
+      <div class="stagecol">
+        ${c.label ? `<div class="stagelabel">${esc(c.label)}</div>` : ""}
+        <div class="sflipwrap"><div class="sflipinner" id="flip${i}">
+          <div class="sface back"><span>❦</span></div>
+          <div class="sface front">${c.card ? `<b class="${isRed(c.card.s) ? "red" : ""}">${c.card.r}${c.card.s}</b><i>${ROLES[c.card.v]}</i><em>${c.card.v}</em>` : ""}</div>
+        </div></div>
+      </div>`).join("");
+    $("midArea").innerHTML = `
+      <div class="stage">
+        <div class="stitle ${sc.red ? "red" : ""}">${esc(sc.title)}</div>
+        ${cards ? `<div class="scards">${cards}</div>` : ""}
+        ${sc.sub ? `<div class="ssub">${esc(sc.sub)}</div>` : ""}
+      </div>`;
+    (sc.cards || []).forEach((c, i) => {
+      if (c.faceUp) setTimeout(() => { const el = $("flip" + i); if (el) el.classList.add("flipped"); }, 150);
+    });
+  }
+
+  /* ── rendering ── */
+  function show(id) {
+    ["home", "lobby", "game"].forEach((s) => $(s).classList.toggle("hidden", s !== id));
+  }
+
+  function renderLobby() {
+    if (!lobby) return;
+    $("lobbyCode").textContent = lobby.code;
+    $("lobbyList").innerHTML = lobby.players.map((p) => `
+      <div class="prow">
+        <span class="dot ${p.connected ? "" : "off"}"></span>
+        ${esc(p.name)}
+        ${p.seat === 0 ? `<span class="tag">HOST</span>` : ""}
+        ${p.isBot ? `<span class="tag">BOT</span>` : ""}
+      </div>`).join("");
+    const host = lobby.isHost;
+    $("hostControls").classList.toggle("hidden", !host);
+    $("waitNote").classList.toggle("hidden", host);
+  }
+
+  function targetsFor(cardV) {
+    const others = view.players.filter((p) => p.alive && !p.prot && p.seat !== view.youSeat).map((p) => p.seat);
+    if (cardV === 5) return [...others, view.youSeat];
+    return others;
+  }
+
+  function renderGame() {
+    if (!view) return;
+    renderOpps(); renderMid(); renderMe(); renderModal(); renderLog();
+  }
+
+  function renderOpps() {
+    const tm = ui.mode === "target" ? targetsFor(view.hand[ui.selCard].v) : [];
+    $("oppsRow").innerHTML = view.players.filter((p) => p.seat !== view.youSeat).map((p) => {
+      const targetable = tm.includes(p.seat);
+      return `
+      <div class="seat ${view.phase === "turn" && view.turn === p.seat ? "active" : ""} ${!p.alive ? "dead" : ""} ${targetable ? "targetable" : ""}" data-seat="${p.seat}">
+        <div class="seat-top">
+          <span class="pname">${esc(p.name)}</span>
+          <span class="chip gold">★${p.wins}</span>
+          ${p.prot && p.alive ? `<span class="chip shield">🛡</span>` : ""}
+          ${!p.alive ? `<span class="chip out">OUT</span>` : ""}
+          ${!p.connected && !p.isBot ? `<span class="chip off">offline</span>` : ""}
+        </div>
+        <div class="seat-mid">${p.alive ? `<div class="cardback"><span>❦</span></div>` : `<span class="deadtxt">eliminated</span>`}</div>
+        ${targetable ? `<div class="tap">TAP TO TARGET</div>` : ""}
+      </div>`;
+    }).join("");
+    $("oppsRow").querySelectorAll(".seat.targetable").forEach((el) => {
+      el.onclick = () => pickTarget(+el.dataset.seat);
+    });
+  }
+
+  function renderMid() {
+    if (playing) return;
+    $("midArea").innerHTML = `
+      <div class="banner">
+        <h2>${esc(banner.title)}</h2>
+        ${banner.sub ? `<p>${esc(banner.sub)}</p>` : ""}
+      </div>
+      <div class="deckrow"><div class="cardback"><span>❦</span></div>${view.deckCount}</div>`;
+  }
+
+  function renderMe() {
+    const me = view.players[view.youSeat];
+    const myTurn = view.phase === "turn" && view.turn === view.youSeat && !playing;
+    const hand = view.hand || [];
+    const forced = hand.some((c) => c.v === 7) && hand.some((c) => c.v === 5 || c.v === 6);
+    const tm = ui.mode === "target" ? targetsFor(hand[ui.selCard].v) : [];
+    const meTargetable = tm.includes(view.youSeat);
+
+    let hint = "";
+    if (myTurn && ui.mode === "choose") hint = forced ? "Countess + King/Prince — you must play the 7." : "Tap a card to play it.";
+    if (ui.mode === "target") hint = "Tap a glowing player above.";
+    if (ui.mode === "guess") hint = "Guess their card:";
+
+    $("meBar").className = `mebar ${myTurn ? "turn" : ""} ${meTargetable ? "metarget" : ""}`;
+    $("meBar").innerHTML = `
+      <div class="merow">
+        <div class="mecards">
+          ${me.alive ? hand.map((c, i) => `
+            <div class="bigcard ${myTurn && ui.mode === "choose" && (!forced || c.v === 7) ? "click" : ""} ${myTurn && ui.mode === "choose" && forced && c.v !== 7 ? "dim" : ""}" data-i="${i}">
+              <div class="rk ${isRed(c.s) ? "red" : ""}">${c.r}${c.s}</div>
+              <div class="rl">${ROLES[c.v]}</div>
+              <div class="fx">${FX[c.v]}</div>
+              <div class="vv ${isRed(c.s) ? "red" : ""}">${c.v}</div>
+            </div>`).join("") : `<div style="font-size:11px;color:#8aa89b;padding:8px 0">You're out — watching the round finish.</div>`}
+        </div>
+        <div class="meinfo">
+          <div class="seat-top">
+            <span class="pname">${esc(me.name)} (you)</span>
+            <span class="chip gold">★${me.wins}</span>
+            ${me.prot && me.alive ? `<span class="chip shield">🛡 Protected</span>` : ""}
+            ${!me.alive ? `<span class="chip out">OUT</span>` : ""}
+            ${meTargetable ? `<span class="chip shield">TAP HERE = YOURSELF</span>` : ""}
+          </div>
+          <div class="hint">${hint}</div>
+          ${ui.mode === "guess" ? `<div class="guessrow">${[2,3,4,5,6,7,8].map((v) => `<button class="gbtn" data-g="${v}">${v}<small>${ROLES[v]}</small></button>`).join("")}</div>` : ""}
+          ${ui.mode === "target" || ui.mode === "guess" ? `<button class="cancel" id="cancelBtn">Cancel</button>` : ""}
+        </div>
+      </div>`;
+
+    if (myTurn && ui.mode === "choose") {
+      $("meBar").querySelectorAll(".bigcard.click").forEach((el) => { el.onclick = () => pickCard(+el.dataset.i); });
+    }
+    if (meTargetable) $("meBar").onclick = (e) => { if (!e.target.closest(".gbtn,.cancel")) pickTarget(view.youSeat); };
+    else $("meBar").onclick = null;
+    $("meBar").querySelectorAll(".gbtn").forEach((el) => { el.onclick = (e) => { e.stopPropagation(); pickGuess(+el.dataset.g); }; });
+    const cb = $("cancelBtn"); if (cb) cb.onclick = (e) => { e.stopPropagation(); ui = { mode: "choose", selCard: null, selTarget: null }; banner = { title: "Your turn", sub: "Pick a card to play" }; renderGame(); };
+  }
+
+  function renderModal() {
+    const w = $("modalWrap");
+    if (view.phase === "roundOver" && view.roundOver) {
+      const isHost = view.youSeat === 0;
+      const go = view.gameOver != null;
+      w.innerHTML = `
+        <div class="overlay"><div class="modal">
+          <h2>${go ? `👑 ${esc(view.players[view.gameOver].name)} wins the game!` : `🏆 ${esc(view.players[view.roundOver.winner].name)} takes Round ${view.roundNum}`}</h2>
+          <p>${esc(view.roundOver.how)}</p>
+          <div class="scores">${view.players.map((p) => `<div class="score">${esc(p.name)}<b>${p.wins}</b></div>`).join("")}</div>
+          ${isHost ? `<button class="btn" id="nextBtn">${go ? "New game" : "Next round"}</button>` : `<div class="waitnote">Waiting for the host…</div>`}
+        </div></div>`;
+      const nb = $("nextBtn"); if (nb) nb.onclick = () => sendMsg({ type: "next" });
+    } else w.innerHTML = "";
+  }
+
+  function renderLog() {
+    if ($("logPanel").classList.contains("hidden")) return;
+    $("logPanel").innerHTML = `<h3>Game log <button id="logClose">✕</button></h3>` +
+      [...(view.log || [])].reverse().map((l) => `<div>${esc(l)}</div>`).join("");
+    $("logClose").onclick = () => $("logPanel").classList.add("hidden");
+  }
+
+  /* ── interactions ── */
+  function pickCard(i) {
+    const c = view.hand[i];
+    ui.selCard = i;
+    const needsTarget = [1, 2, 3, 5, 6].includes(c.v);
+    if (!needsTarget || targetsFor(c.v).length === 0) {
+      sendMsg({ type: "play", handIdx: i });
+      ui = { mode: "idle", selCard: null, selTarget: null };
+      return;
+    }
+    ui.mode = "target";
+    banner = { title: `Playing ${c.r}${c.s} ${ROLES[c.v]}`, sub: c.v === 5 ? "Pick a player (or yourself)" : "Pick a target" };
+    renderGame();
+  }
+  function pickTarget(seat) {
+    const c = view.hand[ui.selCard];
+    if (!targetsFor(c.v).includes(seat)) return;
+    if (c.v === 1) {
+      ui.selTarget = seat; ui.mode = "guess";
+      banner = { title: `Guard → ${view.players[seat].name}`, sub: "Guess their card" };
+      renderGame();
+      return;
+    }
+    sendMsg({ type: "play", handIdx: ui.selCard, targetSeat: seat });
+    ui = { mode: "idle", selCard: null, selTarget: null };
+    renderGame();
+  }
+  function pickGuess(v) {
+    sendMsg({ type: "play", handIdx: ui.selCard, targetSeat: ui.selTarget, guess: v });
+    ui = { mode: "idle", selCard: null, selTarget: null };
+    renderGame();
+  }
+
+  /* ── static buttons ── */
+  $("createBtn").onclick = () => { $("homeErr").textContent = ""; sendMsg({ type: "create", name: $("nameInput").value }); };
+  $("joinBtn").onclick = () => { $("homeErr").textContent = ""; sendMsg({ type: "join", name: $("nameInput").value, code: $("codeInput").value }); };
+  $("startBtn") && ($("startBtn").onclick = () => sendMsg({ type: "start", fillBots: $("fillBots").checked }));
+  $("fastBtn").onclick = () => { fast = !fast; $("fastBtn").textContent = fast ? "⚡ Fast" : "⚡ Normal"; $("fastBtn").classList.toggle("on", fast); };
+  $("logBtn").onclick = () => { $("logPanel").classList.toggle("hidden"); renderLog(); };
+
+  connect();
+  show("home");
+})();
+</script>
+</body>
+</html>
