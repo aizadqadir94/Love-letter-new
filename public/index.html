@@ -414,6 +414,7 @@
           <div class="seat-top">
             <span class="pname">${esc(me.name)} (you)</span>
             <span class="chip gold">★${me.wins}</span>
+            <span class="chip">Deck ${view.deckCount}</span>
             ${me.prot && me.alive ? `<span class="chip shield">🛡 Protected</span>` : ""}
             ${!me.alive ? `<span class="chip out">OUT</span>` : ""}
             ${meTargetable ? `<span class="chip shield">TAP HERE = YOURSELF</span>` : ""}
