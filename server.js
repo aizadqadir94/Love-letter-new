@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 3000;
 /* ── game constants ────────────────────────── */
 const ROLES = {
   1: "Guard", 2: "Priest", 3: "Baron", 4: "Handmaid",
-  5: "Prince", 6: "King", 7: "Countess", 8: "Princess", 9: "KILL",
+  5: "Prince", 6: "King", 7: "Countess", 8: "Princess", 0: "KILL",
 };
 const DECK_SPEC = [
   { r: "A", s: "♠", v: 1 }, { r: "A", s: "♥", v: 1 }, { r: "A", s: "♦", v: 1 }, { r: "A", s: "♣", v: 1 }, { r: "J", s: "♠", v: 1 },
@@ -31,7 +31,7 @@ const DECK_SPEC = [
   { r: "6", s: "♠", v: 6 }, { r: "6", s: "♣", v: 6 },
   { r: "7", s: "♣", v: 7 },
   { r: "8", s: "♥", v: 8 },
-  { r: "K", s: "☠", v: 9 },
+  { r: "K", s: "☠", v: 0 },
 ];
 const FIVE_PLUS_PLAYER_EXTRA_CARDS = [
   { r: "J", s: "♥", v: 1 },
@@ -47,6 +47,16 @@ const MIN_START_PLAYERS = 3;
 const BOT_FILL_TARGET = 4;
 const BOT_NAMES = ["Bot Zara", "Bot Rafiq", "Bot Meena", "Bot Iqbal", "Bot Sana", "Bot Omar"];
 const cardLabel = (c) => `${c.r}${c.s} ${ROLES[c.v]}`;
+
+function freshCard(card) {
+  const c = { ...card };
+  if (c.v === 0) c.killLocked = true;
+  return c;
+}
+
+function unlockHeldKillForSeat(st, seat) {
+  st.hands[seat].forEach((c) => { if (c.v === 0 && c.killLocked) c.killLocked = false; });
+}
 
 /* ── rooms ─────────────────────────────────── */
 const rooms = new Map();
@@ -97,7 +107,7 @@ function touch(room) { room.lastActive = Date.now(); }
 function startRound(room, roundNum, starter, keepWins) {
   const n = room.players.length;
   const roundDeckSpec = deckForPlayerCount(n);
-  const deck = shuffle(roundDeckSpec.map((c) => ({ ...c })));
+  const deck = shuffle(roundDeckSpec.map((c) => freshCard(c)));
   const burned = deck.pop();
   room.state = {
     hands: Array.from({ length: n }, () => [deck.pop()]),
@@ -126,7 +136,7 @@ function aliveSeats(st) { return st.alive.map((a, i) => (a ? i : -1)).filter((i)
 
 function validTargets(room, seat, value) {
   const st = room.state;
-  if (value === 9) return room.players.map((_, i) => i).filter((i) => st.alive[i] && i !== seat);
+  if (value === 0) return room.players.map((_, i) => i).filter((i) => st.alive[i] && i !== seat);
   const others = room.players.map((_, i) => i).filter((i) => st.alive[i] && i !== seat && !st.prot[i]);
   return others;
 }
@@ -226,7 +236,7 @@ function resolvePlay(room, seat, handIdx, targetSeat, guess) {
   if (card.v === 8) {
     eliminate(room, seat, "discarded the Princess 8♥");
     S.push({ title: `${A} is OUT`, sub: "The Princess was discarded", cards: [{ card, faceUp: true, vis: "all" }], red: true, dur: 2600 });
-  } else if (!hasT && [1, 2, 3, 5, 6, 9].includes(card.v)) {
+  } else if (!hasT && [1, 2, 3, 5, 6, 0].includes(card.v)) {
     pushLog(room, `${A} played ${cardLabel(card)} — no valid target`);
     S.push({ title: "No valid target", sub: "Everyone is protected — no effect", cards: [], dur: 2000 });
   } else if (card.v === 1) {
@@ -291,7 +301,7 @@ function resolvePlay(room, seat, handIdx, targetSeat, guess) {
   } else if (card.v === 7) {
     pushLog(room, `${A}: Countess`);
     S.push({ title: "The Countess bows out", sub: "No effect… but why was she played? 🤔", cards: [], dur: 2000 });
-  } else if (card.v === 9) {
+  } else if (card.v === 0) {
     const blocked = st.lastPlayed[targetSeat] === 4;
     if (blocked) {
       pushLog(room, `${A}: KILL on ${T} blocked — ${T} played a 4 last turn`);
@@ -307,13 +317,14 @@ function resolvePlay(room, seat, handIdx, targetSeat, guess) {
       S.push({
         title: `${T} is OUT`,
         sub: `KILL eliminates instantly`,
-        cards: [{ card: { r: "K", s: "☠", v: 9 }, faceUp: true, label: "KILL", vis: "all" }],
+        cards: [{ card: { r: "K", s: "☠", v: 0 }, faceUp: true, label: "KILL", vis: "all" }],
         red: true,
         dur: 2800,
       });
     }
   }
 
+  unlockHeldKillForSeat(st, seat);
   checkRoundEnd(room);
   playScenes(room, S);
 }
@@ -353,15 +364,20 @@ function botMove(room, seat) {
   if (forced) handIdx = hand.findIndex((c) => c.v === 7);
   else if (c0.v === 8) handIdx = 1;
   else if (c1.v === 8) handIdx = 0;
-  else if (c0.v === 9) handIdx = 0;
-  else if (c1.v === 9) handIdx = 1;
+  else if (c0.v === 0 && !c0.killLocked) handIdx = 0;
+  else if (c1.v === 0 && !c1.killLocked) handIdx = 1;
   else handIdx = c0.v <= c1.v ? 0 : 1;
 
-  const card = hand[handIdx];
+  let card = hand[handIdx];
+  if (card.v === 0 && card.killLocked) {
+    const fallback = hand.findIndex((c, idx) => idx !== handIdx);
+    handIdx = fallback >= 0 ? fallback : handIdx;
+    card = hand[handIdx];
+  }
   const targets = validTargets(room, seat, card.v);
   let targetSeat = null, guess = null;
 
-  if ([1, 2, 3, 6, 9].includes(card.v)) targetSeat = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
+  if ([1, 2, 3, 6, 0].includes(card.v)) targetSeat = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
   else if (card.v === 5) {
     targetSeat = targets.length ? targets[Math.floor(Math.random() * targets.length)] : null;
   }
@@ -369,8 +385,8 @@ function botMove(room, seat) {
   if (card.v === 1 && targetSeat != null) {
     const seen = [...hand, ...st.discards.flat()];
     const counts = {};
-    (st.deckSpec || DECK_SPEC).forEach((c) => { if (c.v >= 2) counts[c.v] = (counts[c.v] || 0) + 1; });
-    seen.forEach((c) => { if (c.v >= 2 && counts[c.v]) counts[c.v]--; });
+    (st.deckSpec || DECK_SPEC).forEach((c) => { if (c.v !== 1) counts[c.v] = (counts[c.v] || 0) + 1; });
+    seen.forEach((c) => { if (c.v !== 1 && counts[c.v] != null) counts[c.v]--; });
     const pool = [];
     Object.entries(counts).forEach(([v, n]) => { for (let k = 0; k < n; k++) pool.push(+v); });
     guess = pool.length ? pool[Math.floor(Math.random() * pool.length)] : 5;
@@ -518,14 +534,15 @@ wss.on("connection", (ws) => {
       const card = hand[handIdx];
       const forced = hand.some((c) => c.v === 7) && hand.some((c) => c.v === 5 || c.v === 6);
       if (forced && card.v !== 7) return send(ws, { type: "error", msg: "Countess rule — you must play the 7." });
+      if (card.v === 0 && card.killLocked) return send(ws, { type: "error", msg: "KILL cannot be used the first turn you get it. Use it from your next turn onward." });
       const targets = validTargets(room, seat, card.v);
       let targetSeat = null, guess = null;
-      if ([1, 2, 3, 5, 6, 9].includes(card.v) && targets.length > 0) {
+      if ([1, 2, 3, 5, 6, 0].includes(card.v) && targets.length > 0) {
         targetSeat = m.targetSeat;
         if (typeof targetSeat !== "number" || !targets.includes(targetSeat)) return send(ws, { type: "error", msg: "Pick a valid target." });
         if (card.v === 1) {
           guess = m.guess;
-          if (typeof guess !== "number" || guess < 2 || guess > 9) return send(ws, { type: "error", msg: "Guess must be 2–9." });
+          if (typeof guess !== "number" || ![0,2,3,4,5,6,7,8].includes(guess)) return send(ws, { type: "error", msg: "Guess must be 0 or 2–8." });
         }
       }
       clearTimers(room);

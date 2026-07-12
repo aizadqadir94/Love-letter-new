@@ -15,12 +15,12 @@ so nobody can cheat by inspecting the page.
 | 6♠ 6♣ | King | 2 |
 | 7♣ | Countess | 1 |
 | 8♥ | Princess | 1 |
-| K☠ | KILL | 1 |
+| K☠ (0) | KILL | 1 |
 
 For 5–6 players: add J♥ Guard, 2♣ Priest, and 3♣ Baron.
 
 House rules: Baron duel cards are shown ONLY to the two duelists.
-No public discard lists. First to 4 round wins takes the game. Card 5 forces an opponent, not yourself, to discard face up and redraw. KILL eliminates any chosen opponent instantly unless that target played a 4 on their previous turn.
+No public discard lists. First to 4 round wins takes the game. Card 5 forces an opponent, not yourself, to discard face up and redraw. KILL has value 0. It eliminates any chosen opponent instantly unless that target played a 4 on their previous turn, and KILL cannot be used on the first turn after you get it.
 
 ## Files
 ```
