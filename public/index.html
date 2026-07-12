@@ -100,6 +100,7 @@
   .bigcard.click { cursor:pointer; transition:transform .15s; }
   .bigcard.click:active { transform:translateY(-5px); }
   .bigcard.dim { opacity:.4; }
+  .bigcard.locked { opacity:.45; filter:saturate(.8); }
   .bigcard .rk { font-family:'Crimson Pro',serif; font-size:19px; font-weight:700; line-height:1; }
   .bigcard .rl { font-family:'Crimson Pro',serif; font-size:11px; font-weight:700; border-top:1px solid #d8d0bd; margin-top:3px; padding-top:3px; }
   .bigcard .fx { font-size:8px; color:#5a5344; line-height:1.3; margin-top:2px; }
@@ -193,15 +194,15 @@
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
-  const ROLES = {1:"Guard",2:"Priest",3:"Baron",4:"Handmaid",5:"Prince",6:"King",7:"Countess",8:"Princess",9:"KILL"};
-  const FX = {1:"Guess a card (not Guard). Right → out.",2:"Peek at a player's hand.",3:"Compare hands. Lower is out.",4:"Protected until your next turn.",5:"Opponent discards hand & redraws.",6:"Trade hands with a player.",7:"Forced play with King/Prince.",8:"Discard her = you're out.",9:"Eliminate any player unless they played a 4 on their previous turn."};
+  const ROLES = {1:"Guard",2:"Priest",3:"Baron",4:"Handmaid",5:"Prince",6:"King",7:"Countess",8:"Princess",0:"KILL"};
+  const FX = {1:"Guess a card (not Guard). Right → out.",2:"Peek at a player's hand.",3:"Compare hands. Lower is out.",4:"Protected until your next turn.",5:"Opponent discards hand & redraws.",6:"Trade hands with a player.",7:"Forced play with King/Prince.",8:"Discard her = you're out.",0:"Eliminate any player unless they played a 4 on their previous turn. You cannot use it the first turn you get it."};
   const isRed = (s) => s === "♥" || s === "♦";
   const esc = (t) => String(t).replace(/[&<>"']/g, (c) => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-  const handCardHTML = (c) => c.v === 9
-    ? `<div class="rk killtxt">KILL</div><div class="rl">KILL</div><div class="fx">${FX[9]}</div><div class="vv">9</div>`
+  const handCardHTML = (c) => c.v === 0
+    ? `<div class="rk killtxt">KILL</div><div class="rl">KILL</div><div class="fx">${FX[0]}</div><div class="vv">0</div>`
     : `<div class="rk ${isRed(c.s) ? "red" : ""}">${c.r}${c.s}</div><div class="rl">${ROLES[c.v]}</div><div class="fx">${FX[c.v]}</div><div class="vv ${isRed(c.s) ? "red" : ""}">${c.v}</div>`;
-  const stageCardHTML = (c) => c.v === 9
-    ? `<div class="killstage">KILL</div><i>KILL</i><em>9</em>`
+  const stageCardHTML = (c) => c.v === 0
+    ? `<div class="killstage">KILL</div><i>KILL</i><em>0</em>`
     : `<b class="${isRed(c.s) ? "red" : ""}">${c.r}${c.s}</b><i>${ROLES[c.v]}</i><em>${c.v}</em>`;
 
   let ws = null, wsOpen = false, retry = 0;
@@ -326,7 +327,7 @@
         ${c.label ? `<div class="stagelabel">${esc(c.label)}</div>` : ""}
         <div class="sflipwrap"><div class="sflipinner" id="flip${i}">
           <div class="sface back"><span>❦</span></div>
-          <div class="sface front${c.card && c.card.v === 9 ? " kill" : ""}">${c.card ? stageCardHTML(c.card) : ""}</div>
+          <div class="sface front${c.card && c.card.v === 0 ? " kill" : ""}">${c.card ? stageCardHTML(c.card) : ""}</div>
         </div></div>
       </div>`).join("");
     $("midArea").innerHTML = `
@@ -360,7 +361,7 @@
   }
 
   function targetsFor(cardV) {
-    if (cardV === 9) return view.players.filter((p) => p.alive && p.seat !== view.youSeat).map((p) => p.seat);
+    if (cardV === 0) return view.players.filter((p) => p.alive && p.seat !== view.youSeat).map((p) => p.seat);
     return view.players.filter((p) => p.alive && !p.prot && p.seat !== view.youSeat).map((p) => p.seat);
   }
 
@@ -410,8 +411,9 @@
     const meTargetable = tm.includes(view.youSeat);
 
     let hint = "";
-    if (myTurn && ui.mode === "choose") hint = forced ? "Countess + King/Prince — you must play the 7." : "Tap a card to play it.";
-    if (ui.mode === "target") hint = hand[ui.selCard]?.v === 9 ? "Tap any glowing player. KILL only fails if they played a 4 on their previous turn." : "Tap a glowing player above.";
+    const hasLockedKill = hand.some((c) => c.v === 0 && c.killLocked);
+    if (myTurn && ui.mode === "choose") hint = forced ? "Countess + King/Prince — you must play the 7." : hasLockedKill ? "KILL cannot be used the first turn you get it." : "Tap a card to play it.";
+    if (ui.mode === "target") hint = hand[ui.selCard]?.v === 0 ? "Tap any glowing player. KILL only fails if they played a 4 on their previous turn." : "Tap a glowing player above.";
     if (ui.mode === "guess") hint = "Guess their card:";
 
     $("meBar").className = `mebar ${myTurn ? "turn" : ""} ${meTargetable ? "metarget" : ""}`;
@@ -419,7 +421,7 @@
       <div class="merow">
         <div class="mecards">
           ${me.alive ? hand.map((c, i) => `
-            <div class="bigcard ${c.v === 9 ? "kill" : ""} ${myTurn && ui.mode === "choose" && (!forced || c.v === 7) ? "click" : ""} ${myTurn && ui.mode === "choose" && forced && c.v !== 7 ? "dim" : ""}" data-i="${i}">
+            <div class="bigcard ${c.v === 0 ? "kill" : ""} ${c.v === 0 && c.killLocked ? "locked" : ""} ${myTurn && ui.mode === "choose" && (!forced || c.v === 7) && !(c.v === 0 && c.killLocked) ? "click" : ""} ${myTurn && ui.mode === "choose" && ((forced && c.v !== 7) || (c.v === 0 && c.killLocked)) ? "dim" : ""}" data-i="${i}">
               ${handCardHTML(c)}
             </div>`).join("") : `<div style="font-size:11px;color:#8aa89b;padding:8px 0">You're out — watching the round finish.</div>`}
         </div>
@@ -434,7 +436,7 @@
             <button class="roombtn" id="roomBtn">Main room</button>
           </div>
           <div class="hint">${hint}</div>
-          ${ui.mode === "guess" ? `<div class="guessrow">${[2,3,4,5,6,7,8,9].map((v) => `<button class="gbtn" data-g="${v}">${v}<small>${ROLES[v]}</small></button>`).join("")}</div>` : ""}
+          ${ui.mode === "guess" ? `<div class="guessrow">${[0,2,3,4,5,6,7,8].map((v) => `<button class="gbtn" data-g="${v}">${v}<small>${ROLES[v]}</small></button>`).join("")}</div>` : ""}
           ${ui.mode === "target" || ui.mode === "guess" ? `<button class="cancel" id="cancelBtn">Cancel</button>` : ""}
         </div>
       </div>`;
@@ -474,15 +476,20 @@
   /* ── interactions ── */
   function pickCard(i) {
     const c = view.hand[i];
+    if (c.v === 0 && c.killLocked) {
+      banner = { title: "KILL is locked", sub: "You cannot use KILL on the first turn you get it." };
+      renderGame();
+      return;
+    }
     ui.selCard = i;
-    const needsTarget = [1, 2, 3, 5, 6, 9].includes(c.v);
+    const needsTarget = [1, 2, 3, 5, 6, 0].includes(c.v);
     if (!needsTarget || targetsFor(c.v).length === 0) {
       sendMsg({ type: "play", handIdx: i });
       ui = { mode: "idle", selCard: null, selTarget: null };
       return;
     }
     ui.mode = "target";
-    banner = { title: `Playing ${c.v === 9 ? "KILL" : `${c.r}${c.s}`} ${ROLES[c.v]}`, sub: c.v === 5 ? "Pick an opponent" : c.v === 9 ? "Pick any player — KILL ignores current protection" : "Pick a target" };
+    banner = { title: `Playing ${c.v === 0 ? "KILL" : `${c.r}${c.s}`} ${ROLES[c.v]}`, sub: c.v === 5 ? "Pick an opponent" : c.v === 0 ? "Pick any player — KILL ignores current protection" : "Pick a target" };
     renderGame();
   }
   function pickTarget(seat) {
