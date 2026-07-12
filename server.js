@@ -49,13 +49,7 @@ const BOT_NAMES = ["Bot Zara", "Bot Rafiq", "Bot Meena", "Bot Iqbal", "Bot Sana"
 const cardLabel = (c) => `${c.r}${c.s} ${ROLES[c.v]}`;
 
 function freshCard(card) {
-  const c = { ...card };
-  if (c.v === 0) c.killLocked = true;
-  return c;
-}
-
-function unlockHeldKillForSeat(st, seat) {
-  st.hands[seat].forEach((c) => { if (c.v === 0 && c.killLocked) c.killLocked = false; });
+  return { ...card };
 }
 
 /* ── rooms ─────────────────────────────────── */
@@ -324,7 +318,6 @@ function resolvePlay(room, seat, handIdx, targetSeat, guess) {
     }
   }
 
-  unlockHeldKillForSeat(st, seat);
   checkRoundEnd(room);
   playScenes(room, S);
 }
@@ -364,16 +357,11 @@ function botMove(room, seat) {
   if (forced) handIdx = hand.findIndex((c) => c.v === 7);
   else if (c0.v === 8) handIdx = 1;
   else if (c1.v === 8) handIdx = 0;
-  else if (c0.v === 0 && !c0.killLocked) handIdx = 0;
-  else if (c1.v === 0 && !c1.killLocked) handIdx = 1;
+  else if (c0.v === 0) handIdx = 0;
+  else if (c1.v === 0) handIdx = 1;
   else handIdx = c0.v <= c1.v ? 0 : 1;
 
-  let card = hand[handIdx];
-  if (card.v === 0 && card.killLocked) {
-    const fallback = hand.findIndex((c, idx) => idx !== handIdx);
-    handIdx = fallback >= 0 ? fallback : handIdx;
-    card = hand[handIdx];
-  }
+  const card = hand[handIdx];
   const targets = validTargets(room, seat, card.v);
   let targetSeat = null, guess = null;
 
@@ -534,7 +522,6 @@ wss.on("connection", (ws) => {
       const card = hand[handIdx];
       const forced = hand.some((c) => c.v === 7) && hand.some((c) => c.v === 5 || c.v === 6);
       if (forced && card.v !== 7) return send(ws, { type: "error", msg: "Countess rule — you must play the 7." });
-      if (card.v === 0 && card.killLocked) return send(ws, { type: "error", msg: "KILL cannot be used the first turn you get it. Use it from your next turn onward." });
       const targets = validTargets(room, seat, card.v);
       let targetSeat = null, guess = null;
       if ([1, 2, 3, 5, 6, 0].includes(card.v) && targets.length > 0) {
